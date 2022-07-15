@@ -61,9 +61,14 @@ uint8_t j = 0;  // neopixel counter for rainbow
 Scheduler taskScheduler;
 void readControls();
 void updateDisplay();
+void updateLEDs();
+void updateSynth();
 
-Task inputLoop (50, TASK_FOREVER, &readControls, &taskScheduler, true);
-Task displayLoop (5, TASK_FOREVER, &updateDisplay, &taskScheduler, true);
+Task inputLoop (100, TASK_FOREVER, &readControls, &taskScheduler, true);
+Task displayLoop (20, TASK_FOREVER, &updateDisplay, &taskScheduler, true);
+Task LEDLoop (50, TASK_FOREVER, &updateLEDs, &taskScheduler, true);
+Task synthLoop (5, TASK_FOREVER, &updateSynth, &taskScheduler, true);
+
 
 void setup() {
   AudioMemory(120);
@@ -118,7 +123,6 @@ void loop() {
     arcada.pixels.setPixelColor(i, Wheel(((i * 256 / arcada.pixels.numPixels()) + j * 5) & 255));
   }
   arcada.pixels.show();
-
 }
 
 void readControls() {
@@ -128,18 +132,7 @@ void readControls() {
   
   joystickX = arcada.readJoystickX() - xoffset;
   joystickY = arcada.readJoystickY() - yoffset;
-  if (buttons & ARCADA_BUTTONMASK_A) {
-    float pitch1 = map(joystickX, -512, 511, 120, 240);
-    float pitch2 = map(joystickY, -512, 511, .80, 5);
-    waveform1.frequency(pitch1);
-    waveform2.frequency(pitch2);
-  }
-  else {
-    filter1.frequency(map(joystickX, -512, 511, 120, 2000));
-  }
-
   /*
-
     #define ARCADA_BUTTONMASK_A 0x01
     #define ARCADA_BUTTONMASK_B 0x02
     #define ARCADA_BUTTONMASK_SELECT 0x04
@@ -159,13 +152,13 @@ void readControls() {
 
   sensors_event_t event;
   arcada.accel->getEvent(&event);
-
-  j++; // update neopixels
-
-
   //  arcada.display->print("Z:"); arcada.display->print(event.acceleration.z, 1);
   //  Serial.print("Light: "); Serial.println(arcada.readLightSensor());
   //  float vbat = arcada.readBatterySensor();
+}
+
+void updateLEDs() {
+    j++; // update neopixels
 }
 
 void updateDisplay() {
@@ -183,10 +176,22 @@ void updateDisplay() {
   if (buttons & ARCADA_BUTTONMASK_START) {
     arcada.display->drawRoundRect(85, 100, 20, 10, 5, ARCADA_WHITE);
   }
-
   arcada.display->drawCircle(20, 100, 20, ARCADA_WHITE);
-  arcada.display->fillCircle(joystickX, joystickY, 5, ARCADA_WHITE);
+  int joyX = joystickX / 512.0 * 15.0 + 20; 
+  int joyY = joystickY / 512.0 * 15.0 + 100;
+  arcada.display->fillCircle(joyX, joyY, 5, ARCADA_WHITE);
+}
 
+void updateSynth() {
+  if (buttons & ARCADA_BUTTONMASK_A) {
+    float pitch1 = map(joystickX, -512, 511, 120, 240);
+    float pitch2 = map(joystickY, -512, 511, .80, 5);
+    waveform1.frequency(pitch1);
+    waveform2.frequency(pitch2);
+  }
+  else {
+    filter1.frequency(map(joystickX, -512, 511, 120, 2000));
+  }
 }
 
 uint32_t Wheel(byte WheelPos) {
